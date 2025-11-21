@@ -1,0 +1,173 @@
+I created a simple web-based digital clock you can open in any browser. It shows the current time and date, lets you toggle 12/24-hour format, and pick a timezone. Open the file below in your browser to run it. If you want an analog clock, a desktop app, or code for a microcontroller instead, tell me which and I’ll create that next.
+
+```html name=clock.html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Clock</title>
+  <style>
+    :root {
+      --bg: #0f1724;
+      --card: #0b1220;
+      --accent: #7dd3fc;
+      --muted: #94a3b8;
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg, #071025 0%, #081426 60%);
+      color: white;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .clock {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.04);
+      padding: 28px;
+      border-radius: 12px;
+      width: 320px;
+      text-align:center;
+      box-shadow: 0 6px 24px rgba(2,6,23,0.6);
+    }
+    .time {
+      font-size: 48px;
+      font-weight: 600;
+      letter-spacing: -1px;
+      color: var(--accent);
+    }
+    .date {
+      margin-top:8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .controls {
+      display:flex;
+      gap:8px;
+      margin-top:16px;
+      justify-content:center;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    select, button {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.06);
+      color: white;
+      padding:8px 10px;
+      border-radius:8px;
+      font-size:14px;
+      outline:none;
+    }
+    button.toggle {
+      cursor:pointer;
+    }
+    .small {
+      font-size:12px;
+      color:var(--muted);
+      margin-top:10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="clock" role="application" aria-label="Digital clock">
+    <div id="time" class="time">--:--:--</div>
+    <div id="date" class="date">Loading date...</div>
+
+    <div class="controls">
+      <button id="toggleFormat" class="toggle" aria-pressed="false">24-hour</button>
+      <select id="tzSelect" aria-label="Timezone">
+        <option value="local">Local timezone</option>
+        <option value="UTC">UTC</option>
+        <option value="America/New_York">America/New_York</option>
+        <option value="Europe/London">Europe/London</option>
+        <option value="Europe/Berlin">Europe/Berlin</option>
+        <option value="Asia/Tokyo">Asia/Tokyo</option>
+        <option value="Australia/Sydney">Australia/Sydney</option>
+      </select>
+      <button id="pause" class="toggle">Pause</button>
+    </div>
+
+    <div class="small">Tip: open devtools to experiment with other IANA timezones.</div>
+  </div>
+
+  <script>
+    (function(){
+      const timeEl = document.getElementById('time');
+      const dateEl = document.getElementById('date');
+      const tzSelect = document.getElementById('tzSelect');
+      const toggleFormat = document.getElementById('toggleFormat');
+      const pauseBtn = document.getElementById('pause');
+
+      let use24 = true;
+      let running = true;
+      let tz = 'local';
+
+      toggleFormat.addEventListener('click', () => {
+        use24 = !use24;
+        toggleFormat.textContent = use24 ? '24-hour' : '12-hour';
+        toggleFormat.setAttribute('aria-pressed', String(!use24));
+        update(); // immediate refresh
+      });
+
+      tzSelect.addEventListener('change', (e) => {
+        tz = e.target.value;
+        update();
+      });
+
+      pauseBtn.addEventListener('click', () => {
+        running = !running;
+        pauseBtn.textContent = running ? 'Pause' : 'Resume';
+        if (running) tick();
+      });
+
+      function formatTime(date) {
+        const opts = {
+          hour: 'numeric', minute: '2-digit', second: '2-digit',
+          hour12: !use24,
+          timeZone: tz === 'local' ? undefined : tz
+        };
+        return new Intl.DateTimeFormat(undefined, opts).format(date);
+      }
+
+      function formatDate(date) {
+        const opts = {
+          weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+          timeZone: tz === 'local' ? undefined : tz
+        };
+        return new Intl.DateTimeFormat(undefined, opts).format(date);
+      }
+
+      function update() {
+        const now = new Date();
+        try {
+          // If a named timezone is selected, create a string by using Intl with timeZone
+          const displayTime = formatTime(now);
+          const displayDate = formatDate(now);
+          timeEl.textContent = displayTime;
+          dateEl.textContent = displayDate + (tz === 'local' ? '' : ' — ' + tz);
+        } catch (err) {
+          // Some environments might not support IANA time zones
+          timeEl.textContent = now.toLocaleTimeString();
+          dateEl.textContent = now.toLocaleDateString() + (tz === 'local' ? '' : ' — ' + tz);
+        }
+      }
+
+      function tick() {
+        if (!running) return;
+        update();
+        // aim to update on the second
+        const ms = 1000 - (Date.now() % 1000);
+        setTimeout(tick, ms);
+      }
+
+      // initial
+      update();
+      tick();
+    })();
+  </script>
+</body>
+</html>
+```
